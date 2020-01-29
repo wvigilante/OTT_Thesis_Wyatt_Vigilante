@@ -10,71 +10,64 @@ function overallMatrix = convert_mstm_tmatrix(fname)
 fileID = fopen(fname,'r'); 
 
 line = 1;
-tline = fgets(fileID); % reads line from file, keeping newline
-sizeOfMatrix = str2num(tline);
-subMatrixSize = (sizeOfMatrix(2).^2) + (2 * sizeOfMatrix); % nmax^2 + 2nmax
-firstQuad = zeros(subMatrixSize(2),subMatrixSize(2));
-secondQuad = zeros(subMatrixSize(2),subMatrixSize(2));% the order in which these quadrants exsist is exactly as a cartesian grid
-thirdQuad = zeros(subMatrixSize(2),subMatrixSize(2));
-fourthQuad = zeros(subMatrixSize(2),subMatrixSize(2));
-overallMatrix = [((subMatrixSize(2))*2);((subMatrixSize(2))*2)]; % constructing the overall matrix
-%overallMatrix = [sizeOfMatrix(2);sizeOfMatrix(2)]; % constructing the overall matrix
-%disp(overallMatrix);
-tline = fgets(fileID);
-disp(tline)
+tline = fgets(fileID); % reads top line from file, keeping newline
+tline = str2num(tline);
+sizeOfMatrix = tline(2);
+subMatrixSize = (sizeOfMatrix^2) + (2 * sizeOfMatrix); % nmax^2 + 2nmax
+
+% Allocate storage for data
+% the order in which these quadrants are named is exactly as a cartesian grid
+% [[II, I], [III, IV]]
+firstQuad = zeros(subMatrixSize, subMatrixSize);
+secondQuad = zeros(subMatrixSize, subMatrixSize);
+thirdQuad = zeros(subMatrixSize, subMatrixSize);
+fourthQuad = zeros(subMatrixSize, subMatrixSize);
+
+% Constructing the overall matrix
+tline = fgets(fileID); % Read line 2 of file
+%disp(tline)
+
+% Main loop over remaining lines of file, starting from 3
 while ~feof(fileID)
   line = fgets(fileID); % Read next line
   numLine = str2num(line);
-  %Y = sum(X); % checking to make sure that the row vector is of type integer so that they can be summed
-  if length(numLine)>5
-     n = numLine(1);
-     m = numLine(2);
-     rowPosInSubMatrix = combined_index(n,m);
-     p = 1;
-     realPFirst = numLine(3);
-     imaginaryPFirst = numLine(4);
-     realPSecond = numLine(5);
-     imaginaryPSecond = numLine(6);
-     if q == 1 % Code assumes next if statement runs first (line 3 of file has 3 elts)
-         fourthQuad(rowPosInSubMatrix,colPosInSubMatrix) = realPFirst + imaginaryPFirst*i;
-         firstQuad(rowPosInSubMatrix,colPosInSubMatrix) = realPSecond + imaginaryPSecond*i;
-     else
-         thirdQuad(rowPosInSubMatrix,colPosInSubMatrix) = realPFirst +  imaginaryPFirst*i;
-         secondQuad(rowPosInSubMatrix,colPosInSubMatrix) = realPSecond + imaginaryPSecond*i; 
-     end  
-     %firstOutputLen6 = ["m:" + m, "n:" + n,"p:" + pFirst,"k:"+ k,"l:" + l,"q:"+ q,"Real:" + realPFirst,"Imaginary:" + imaginaryPFirst];
-     %secondOutputLen6 = ["m:" + m, "n:" + n,"p:" + pSecond,"k:"+ k,"l:" + l,"q:"+ q,"Real:" + realPSecond,"Imaginary:" + imaginaryPSecond];
-     %disp(firstOutputLen6);
-     %disp(secondOutputLen6);
-  end
-  if length(numLine)<4
+  
+  if length(numLine) == 3 % Line is l, k, q
      l = numLine(1);
      nprime = l;
      k = numLine(2);
      mprime = k;
      q = numLine(3);
      colPosInSubMatrix = combined_index(nprime,mprime); %calculating column position
-     %outputLen3 = ["l:" + l,"k:"+ k,"q:"+ q];
-     %disp(outputLen3)
-  else
+  elseif length(numLine) == 4 % line is scattering efficiency convergence checks
+     % do nothing
+  elseif length(numLine) == 6 % line has T matrix data
+     n = numLine(1);
+     m = numLine(2);
+     rowPosInSubMatrix = combined_index(n,m);
+     realPFirst = numLine(3); % p = 1
+     imaginaryPFirst = numLine(4);
+     realPSecond = numLine(5); % p = 2
+     imaginaryPSecond = numLine(6);
+     if q == 1 
+         fourthQuad(rowPosInSubMatrix,colPosInSubMatrix) = realPFirst + imaginaryPFirst*i;
+         firstQuad(rowPosInSubMatrix,colPosInSubMatrix) = realPSecond + imaginaryPSecond*i;
+     else % q = 2
+         thirdQuad(rowPosInSubMatrix,colPosInSubMatrix) = realPFirst +  imaginaryPFirst*i;
+         secondQuad(rowPosInSubMatrix,colPosInSubMatrix) = realPSecond + imaginaryPSecond*i; 
+     end  
   end
       
 end
-%overallMatrix(1:24,25:48) = firstQuad;
-%overallMatrix(1:24,1:24) = secondQuad;
-%overallMatrix(25:48,1:24) = thirdQuad;
-%overallMatrix(25:48,25:48) = fourthQuad;
-overallMatrix(1:subMatrixSize(2),(1+subMatrixSize(2)):(subMatrixSize(2)*2)) = firstQuad;
-overallMatrix(1:subMatrixSize(2),1:subMatrixSize(2)) = secondQuad;
-overallMatrix((1+subMatrixSize(2)):(subMatrixSize(2)*2),1:subMatrixSize(2)) = thirdQuad;
-overallMatrix((1+subMatrixSize(2)):(subMatrixSize(2)*2),(1+subMatrixSize(2)):(subMatrixSize(2)*2)) = fourthQuad;
+
+overallMatrix = [secondQuad, firstQuad ; thirdQuad, fourthQuad];
+
 disp(overallMatrix)
-disp(overallMatrix(25,25))
-disp(overallMatrix(1,1))
+
 fclose(fileID);
 
-
 end
+
 
 function [out1,out2] = combined_index(in1,in2)
 %COMBINED_INDEX translates between (n,m) and combined index
